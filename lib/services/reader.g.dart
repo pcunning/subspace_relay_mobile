@@ -32,7 +32,7 @@ final class ReaderProvider extends $AsyncNotifierProvider<Reader, NfcTag?> {
   Reader create() => Reader();
 }
 
-String _$readerHash() => r'dab37cec622d3923770325bc09113ac142b91f6b';
+String _$readerHash() => r'27ed0fc5d61877afe16b8848e49d6cbbf9b4a61c';
 
 abstract class _$Reader extends $AsyncNotifier<NfcTag?> {
   FutureOr<NfcTag?> build();
@@ -93,7 +93,7 @@ final class ReaderRelayProvider
   }
 }
 
-String _$readerRelayHash() => r'124f31cfd8b597d934bf55ad08bb7f81c0bce964';
+String _$readerRelayHash() => r'9a6a841099fda2eb91e2e077d36a02fe06097bd7';
 
 final class ReaderRelayFamily extends $Family
     with
