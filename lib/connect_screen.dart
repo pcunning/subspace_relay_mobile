@@ -1,4 +1,5 @@
 import 'package:convert/convert.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -198,9 +199,10 @@ class ConnectScreen extends HookConsumerWidget {
                   ),
                 ),
               ),
-              ElevatedButton(
-                onPressed: !readyToConnect ? null : () => connect(ConnectionMode.hce), 
-                child: const Text("Start HCE")),
+              if (defaultTargetPlatform != TargetPlatform.iOS)
+                ElevatedButton(
+                  onPressed: !readyToConnect ? null : () => connect(ConnectionMode.hce),
+                  child: const Text("Start HCE")),
               ElevatedButton(
                 onPressed: !readyToConnect ? null : () => connect(ConnectionMode.reader), 
                 child: const Text("Start Reader")),

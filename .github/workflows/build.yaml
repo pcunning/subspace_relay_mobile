@@ -106,3 +106,33 @@ jobs:
           releaseName: "${{ env.BUILD_NAME }}"
           tracks: internal
           status: draft
+
+  build_ios:
+    name: Build iOS
+    runs-on: macos-latest
+    timeout-minutes: 30
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.base.repo.full_name != github.event.pull_request.head.repo.full_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        id: flutter-action
+        with:
+          channel: stable
+          cache: true
+
+      - name: Fetch dependencies
+        run: flutter pub get
+
+      - name: Build iOS (no codesign)
+        run: |
+          flutter build ios --no-codesign --build-number="${{ github.run_number }}" --build-name="${{ env.BUILD_NAME }}"
+
+      - name: Archive iOS build
+        uses: actions/upload-artifact@v5
+        with:
+          name: "subspace_relay_mobile_ios_v${{ env.BUILD_NAME }}"
+          path: build/ios/iphoneos/Runner.app
+          if-no-files-found: error

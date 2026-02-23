@@ -5,6 +5,7 @@ import 'package:convert/convert.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:nfc_manager/nfc_manager.dart';
 import 'package:nfc_manager/nfc_manager_android.dart';
+import 'package:nfc_manager/nfc_manager_ios.dart';
 
 import 'package:subspace_relay_pb/subspace_relay_pb.dart' as $pb;
 
@@ -33,6 +34,8 @@ class Reader extends _$Reader {
 
     NfcManager.instance.startSession(
       pollingOptions: {NfcPollingOption.iso14443},
+      invalidateAfterFirstReadIos: false,
+      alertMessageIos: 'Hold your card near the iPhone',
       onDiscovered: (NfcTag tag) async {
         state = AsyncValue.data(tag);
       },
@@ -66,27 +69,50 @@ class ReaderRelay extends _$ReaderRelay {
       return null;
     }
 
-    final nfcA = NfcAAndroid.from(reader);
-    final isoTag = IsoDepAndroid.from(reader);
+    final Uint8List uid;
+    final Future<Uint8List> Function(Uint8List) transceive;
+    Uint8List? atqa;
+    int? sak;
 
-    if (isoTag == null) {
-      return null;
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      final isoTag = Iso7816Ios.from(reader);
+      if (isoTag == null) {
+        return null;
+      }
+      uid = isoTag.identifier;
+      transceive = (Uint8List bytes) async {
+        final response = await isoTag.sendCommandRaw(data: bytes);
+        // Reassemble full RAPDU: payload + SW1 + SW2
+        final rapdu = Uint8List(response.payload.length + 2);
+        rapdu.setAll(0, response.payload);
+        rapdu[rapdu.length - 2] = response.statusWord1;
+        rapdu[rapdu.length - 1] = response.statusWord2;
+        return rapdu;
+      };
+    } else {
+      final nfcA = NfcAAndroid.from(reader);
+      final isoTag = IsoDepAndroid.from(reader);
+      if (isoTag == null) {
+        return null;
+      }
+      uid = isoTag.tag.id;
+      transceive = isoTag.transceive;
+      atqa = nfcA?.atqa;
+      sak = nfcA?.sak;
     }
-
-    final transceive = isoTag.transceive;
 
     var relayId = await ref.read(relayIdProvider.future);
     if (dynamicRelayId) {
-      relayId = await RelayId.fromString('${relayId.relayId}-${hex.encode(isoTag.tag.id)}');
+      relayId = await RelayId.fromString('${relayId.relayId}-${hex.encode(uid)}');
     }
 
     final relayInfo = $pb.RelayInfo(
       connectionType: $pb.ConnectionType.CONNECTION_TYPE_NFC,
       supportedPayloadTypes: [$pb.PayloadType.PAYLOAD_TYPE_PCSC_READER],
       userAgent: '$appName/${await ref.watch(appVersionProvider.future)}',
-      uid: isoTag.tag.id,
-      atqa: nfcA?.atqa,
-      sak: nfcA == null ? null : [nfcA.sak],
+      uid: uid,
+      atqa: atqa,
+      sak: sak == null ? null : [sak],
     );
 
     final relayDiscovery = $pb.RelayDiscovery(relayId: relayId.relayId, relayInfo: relayInfo);

@@ -105,7 +105,9 @@ class MyApp extends HookConsumerWidget {
 
         switch (uri.path) {
           case '/card':
-            await connect(ConnectionMode.hce);
+            if (defaultTargetPlatform != TargetPlatform.iOS) {
+              await connect(ConnectionMode.hce);
+            }
           case '/reader':
             await connect(ConnectionMode.reader);
           case '/reader-dynamic':
